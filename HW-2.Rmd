@@ -1,6 +1,6 @@
 ---
 title: "MATH 216 Homework 2"
-author: "WRITE YOUR NAME HERE"
+author: "Alison Cook"
 output: html_document
 ---
 
@@ -8,6 +8,8 @@ output: html_document
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(foreign))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(knitr))
 ```
 
 
@@ -15,9 +17,9 @@ suppressPackageStartupMessages(library(foreign))
 
 Please indicate
 
-* Who you collaborated with:
-* Roughly how much time you spent on this HW:
-* What gave you the most trouble:
+* Who you collaborated with: No one, yet--It's a very busy week!
+* Roughly how much time you spent on this HW: ~4 hours
+* What gave you the most trouble: 1. Figuring out what the question from the book was asking and what the "right" answer is. 2. The second part is so open-ended, I'm having trouble knowing what to spend time on and how to present my findings in a way that makes sense.
 * Any comments you have: 
 
 
@@ -44,28 +46,119 @@ pollution <- read.dta(url) %>%
 ### a)
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
+# Create a scatterplot of mortality rate versus level of nitric oxides. Do you
+# think linear regression will fit these data well? Fit the regression and evaluate
+# a residual plot from the regression.
 
+g <- ggplot(data = pollution, aes(x = nox, y = mort)) +
+     geom_point() +
+     labs(title = "Mortality Rate vs. Nitric Oxide Levels", 
+          x = "Relative Nitric Oxide Level", y =    "Mortality rate per 100,000")
+g
+
+model1 <- lm(mort ~ nox, data=pollution)
+summary(model1)
+b <- coefficients(model1)
+b
+
+g + geom_smooth(method = "lm")
+
+model_1_res <- resid(model1)
+model_1_fit <- fitted(model1)
+
+ggplot(data = NULL, aes(x = pollution$nox, y = model_1_res)) +
+  geom_point() +
+  labs(title = "Residuals vs. Nitric Oxide Levels", 
+       x = "Relative Nitric Oxide Levels", y = "Residuals")
+
+ggplot(data = NULL, aes(x = model_1_fit, y = model_1_res)) +
+  geom_point() +
+   labs(title = "Residuals vs. Fitted Values", 
+       x = "Fitted Values", y = "Residuals")
 ```
 
 
 ### b)
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
+# Find an appropriate transformation that will result in data more appropriate
+# for linear regression. Fit a regression to the transformed data and evaluate
+# the new residual plot.
 
+pollution <- mutate(pollution, log_nox = log10(nox))
+
+l <- ggplot(pollution, aes(x = log_nox, y = mort)) +
+  geom_point() +
+  labs(title = "Mortality Rate vs. Log of Nitric Oxide Levels", 
+       x = "Log of Nitric Oxide Levels", y = "Mortality rate per 100,000")
+  
+l
+
+model2 <- lm(mort ~ log_nox, data=pollution)
+summary(model2)
+b <- coefficients(model2)
+b
+
+l + geom_smooth(method = "lm")
+
+model_2_res <- resid(model2)
+model_2_fit <- fitted(model2)
+
+ggplot(data = NULL, aes(x = pollution$log_nox, y = model_2_res)) +
+  geom_point() +
+  labs(title = "Residuals vs. Log of Nitric Oxide Levels", 
+       x = "Log of Relative Nitric Oxide Levels", y = "Residuals")
+
+ggplot(data = NULL, aes(x = model_2_fit, y = model_2_res)) +
+  geom_point() +
+  labs(title = "Residuals vs. Fitted Values", 
+       x = "Fitted Values", y = "Residuals")
 ```
 
 
 ### c)
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
-
+# Interpret the slope coefficient from the model you chose in (b).
+b
+confint(model2)
+# for each increase of 10 in NOX, there is a 35.311 increase in mortality, with given confint 
+# this seems wrong...
 ```
 
 
 ### d)
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
+# Now fit a model predicting mortality rate using levels of nitric oxides, sulfur
+# dioxide, and hydrocarbons as inputs. Use appropriate transformations when
+# helpful. Plot the fitted regression model and interpret the coefficients.
 
+l + geom_smooth(method = "lm")
+
+ggplot(data = pollution, aes(x = hc, y = mort)) +
+  scale_x_log10() +
+  geom_point() +
+  geom_smooth(method ="lm") +
+  labs(title = "Mortality Rate vs. Log of Hydrocarbon Pollution Potential",
+       x = "Log of Relative Hydrocarbon Pollution", y = "Mortality rate per 100,000")
+
+ggplot(data = pollution, aes(x = so2, y = mort)) +
+  geom_point() +
+  scale_x_log10() +
+  geom_smooth(method ="lm") +
+  labs(title = "Mortality Rate vs. Log of Sulphur Dioxide Potential",
+       x = "Log of Relative Sulphur Dioxide Pollution", y = "Mortality rate per 100,000")
+
+#make log columns for hc and so2
+pollution <- mutate(pollution, log_hc = log10(hc))
+pollution <- mutate(pollution, log_so2 = log10(so2))
+
+#interactions or additive? I think additive because not related
+#is this the right way to do this??
+model3 <- lm(mort ~ log_nox + log_hc + log_so2, data=pollution)
+summary(model3)
+coefficients(model3)
 ```
 
 
@@ -74,7 +167,7 @@ pollution <- read.dta(url) %>%
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
 
 ```
-
+Struggling with this....
 
 ### f) What do you think are the reasons for using cross-validation?
 
@@ -110,8 +203,132 @@ profiles <- read.csv("profiles.csv", header=TRUE) %>% tbl_df()
 
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
-# Feel free to make multiple code blocks, but set echo, fig.width, fig.height as 
-# above
+# essays are still everywhere! how to edit out without destroying data set?
+#need to select for each data set, subset of variables :(
+
+
+essays <- select(profiles, contains("essay"))
+profiles <- select(profiles, -contains("essay"))
+
+#let's see how many many males vs. females are on okcupid
+profiles  %>% group_by(sex)  %>% tally() %>% kable()
+#looks like there are 800 blank responses here...
+#since we are specifically looking to predict gender, let's get rid of those
+profiles <- filter(profiles, sex != "")
+
+
+# Define a binary outcome variable
+# y_i = 1 if female
+# y_i = 0 if male
+profiles <- mutate(profiles, is_female = ifelse(sex=="f", 1, 0))
+
+#ages male and female
+# a lot of non-numeric here
+x <- as.numeric(as.character(profiles$age))
+profiles <- mutate(profiles, age_num = x)
+
+ggplot(data = profiles, aes(age_num)) +
+  geom_histogram() +
+  facet_wrap(~sex) +
+  labs(title = "Range of Ages on OKCupid Profiles", 
+       x = "Age", y = "Count")
+
+#look at reported body types by gender
+body_types_gender <- profiles %>% select(body_type, sex) %>% 
+  group_by(body_type, sex) %>% tally() %>% arrange(desc(n))
+
+#let's get rid of blank entries
+body_types_gender <- body_types_gender[3:26,]
+
+body_types_gender$body_type <- factor(body_types_gender$body_type, levels = body_types_gender$body_type[order(-body_types_gender$n)])
+#warnings here, but because tyring to organize both...
+
+ggplot(body_types_gender, aes(x = body_type, y = n, fill = sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Reported Body Types on Bay Area OKCupid Profiles", 
+       x = "Body Type", y = "Number of Users")
+
+#look at diet
+diet <- profiles %>% select(diet, sex) %>% 
+  group_by(diet, sex) %>% tally() %>% arrange(desc(n))
+
+#let's get rid of blank entries
+diet <- diet[3:38,]
+
+diet$diet <- factor(diet$diet, levels = diet$diet[order(-diet$n)])
+#warnings here, but because tyring to organize both...
+
+ggplot(diet, aes(x = diet, y = n, fill = sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Reported Diets of Bay Area OKCupid Users", 
+       x = "Diet", y = "Number of Users")
+
+#look at whether/how not users drink
+drinks <- profiles %>% select(drinks, sex) %>% 
+  group_by(drinks, sex) %>% tally() %>% arrange(desc(n))
+
+#let's get rid of blank entries
+drinks <- drinks[3:14,]
+
+drinks$drinks <- factor(drinks$drinks , levels = drinks$drinks [order(-drinks$n)])
+#warnings here, but because tyring to organize both...
+
+ggplot(drinks, aes(x = drinks, y = n, fill = sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Drinking Habits of Bay Area OKCupid Users",
+       x = "Drinking Habit", y = "Number of Users")
+
+#same for drugs
+drugs <- profiles %>% select(drugs, sex) %>% 
+  group_by(drugs, sex) %>% tally() %>% arrange(desc(n))
+
+#let's get rid of blank entries
+drugs <- drugs[3:8,]
+
+drugs$drugs <- factor(drugs$drugs , levels = drugs$drugs [order(-drugs$n)])
+#warnings here, but because tyring to organize both...
+
+ggplot(drugs, aes(x = drugs, y = n, fill = sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Drug Use of Bay Area OKCupid Users",
+       x = "Drug Use", y = "Number of Users")
+
+
+#education
+education <- profiles %>% select(education, sex) %>% 
+  group_by(education, sex) %>% tally() %>% arrange(desc(n)) %>% 
+  spread(., sex, n)
+
+#let's get rid of blank entries
+education <- education[2:33,]
+
+#graph would be too overwheming, make data table here
+kable(education)
+
+
+#income
+#need income to be a numeric
+x <- as.numeric(as.character(profiles$income))
+profiles <- mutate(profiles, income_num = x)
+
+ggplot(data=profiles, aes(x=income_num, y=is_female)) +
+  geom_jitter(height=0.2, alpha=0.1) +
+  labs(title = "Income of Bay Area OKCupid Users by Gender",
+       x = "Income (Dollars)", y = "Is Female")
+
+#pets
+pets <- profiles %>% select(pets, sex) %>% 
+  group_by(pets, sex) %>% tally() %>% arrange(desc(n)) %>% 
+  spread(., sex, n)
+
+pets <- pets[2:16,] %>% kable(.)
+pets
+
+
+#somehow represent last online?
+
+#map of where they live?
 ```
 
 
