@@ -175,21 +175,21 @@ A regression model that includes three pollutants has additive slope coefficient
 ### e) Cross-validate: fit the model you chose above to the first half of the data and then predict for the second half. (You used all the data to construct the model in (d), so this is not really cross-validation, but it gives a sense of how the steps of cross-validation can be implemented.)
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
-x_orig <- data.frame(log_nox = pollution$log_nox[1:29], 
-                     log_hc = pollution$log_hc[1:29],
-                     log_so2 = pollution$log_so2[1:29])
+x_orig <- data.frame(log_nox = pollution$log_nox[1:30], 
+                     log_hc = pollution$log_hc[1:30],
+                     log_so2 = pollution$log_so2[1:30])
 
-y <- pollution$mort[1:29]
+y <- pollution$mort[1:30]
 
 model3_half <- lm(y ~ log_nox + log_hc + log_so2, data=x_orig)
 
-x_new <- data.frame(log_nox = pollution$log_nox[30:60], 
-                    log_hc = pollution$log_hc[30:60],
-                    log_so2 = pollution$log_so2[30:60])
+x_new <- data.frame(log_nox = pollution$log_nox[31:60], 
+                    log_hc = pollution$log_hc[31:60],
+                    log_so2 = pollution$log_so2[31:60])
 
 model_3b_pred <- predict(model3_half, x_new)
 
-ggplot(data = NULL, aes(x = pollution$mort[30:60], y = model_3b_pred)) +
+ggplot(data = NULL, aes(x = pollution$mort[31:60], y = model_3b_pred)) +
   geom_point() +
   stat_smooth(method = "lm") +
   labs(title = "Observed vs. Predicted Values: Cross Validation", 
