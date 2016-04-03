@@ -10,7 +10,6 @@ suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(foreign))
 suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(knitr))
-suppressPackageStartupMessages(library(pander))
 ```
 
 
@@ -19,7 +18,7 @@ suppressPackageStartupMessages(library(pander))
 Please indicate
 
 * Who you collaborated with: Jacob Dixon and Carter Merenstein
-* Roughly how much time you spent on this HW: ~12 hours
+* Roughly how much time you spent on this HW: ~15 hours
 * What gave you the most trouble: 1. Figuring out what the question from the book was asking and what the "right" answer is. 2. The second part is so open-ended, I'm having trouble knowing what to spend time on and how to present my findings in a way that makes sense.
 * Any comments you have: Once again, the homework has just taken up so much of my week--I am struggling with how open ended it is and knowing when to stop.
 
@@ -56,7 +55,7 @@ g <- ggplot(data = pollution, aes(x = nox, y = mort)) +
 g
 
 model1 <- lm(mort ~ nox, data=pollution)
-pander(model1, digits = 3)
+kable(summary(model1)$coeff, digits = 3)
 
 
 model_1_res <- resid(model1)
@@ -90,7 +89,7 @@ l
 
 
 model2 <- lm(mort ~ log_nox, data=pollution)
-pander(model2, digits = 3)
+kable(summary(model2)$coef, digits = 3)
 
 
 model_2_res <- resid(model2)
@@ -161,7 +160,7 @@ pollution <- pollution %>%
 #interactions or additive? I think additive because not related
 
 model3 <- lm(mort ~ log_nox + log_hc + log_so2, data=pollution)
-pander(model3, digits = 3)
+kable(summary(model3)$coef, digits = 3)
 kable(confint(model3), digits = 3)
 
 ggplot(data = pollution, aes(x=log_nox, y = mort, col=log_hc, size=log_so2)) + 
@@ -169,35 +168,31 @@ ggplot(data = pollution, aes(x=log_nox, y = mort, col=log_hc, size=log_so2)) +
   labs(x = "Log of Nitric Oxide Levels", y = "Mortality rate per 100,000")
 
 ```
-A regression model that includes three pollutants has additive slope coefficients. The model predicts that for each increase of 10^x in NOX, HC, and SO2 respectively there is a 134x, -132x, and 27.1x change in mortality, respectively. However, the 95% confidence interval for SO2 includes 0, so it is not a reliable predictor. 
+A regression model that includes three pollutants has additive slope coefficients. The model predicts that for each multiplicative increase of a factor of 10 in nitric oxide, hydrocarbons, and SO2 there is a 134, -132, and 27.1 factor change in mortality, respectively. However, the 95% confidence interval for SO2 includes 0, so it is not a significant predictor in and of itself. 
 
 
 ### e) Cross-validate: fit the model you chose above to the first half of the data and then predict for the second half. (You used all the data to construct the model in (d), so this is not really cross-validation, but it gives a sense of how the steps of cross-validation can be implemented.)
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
-x_orig <- data.frame(log_nox = pollution$log_nox[1:30], 
-                     log_hc = pollution$log_hc[1:30],
-                     log_so2 = pollution$log_so2[1:30])
 
-y <- pollution$mort[1:30]
+#subset data
+set.seed(30)
+pollution_build <- pollution %>% sample_frac(0.5)
+pollution_predict <- setdiff(pollution, pollution_build)
 
-model3_half <- lm(y ~ log_nox + log_hc + log_so2, data=x_orig)
+model3_half <- lm(mort ~ log_nox + log_hc + log_so2, data=pollution_build)
 
-x_new <- data.frame(log_nox = pollution$log_nox[31:60], 
-                    log_hc = pollution$log_hc[31:60],
-                    log_so2 = pollution$log_so2[31:60])
+model_3b_pred <- predict(model3_half, pollution_predict)
 
-model_3b_pred <- predict(model3_half, x_new)
-
-ggplot(data = NULL, aes(x = pollution$mort[31:60], y = model_3b_pred)) +
+ggplot(data = pollution_predict, aes(x = mort, y = model_3b_pred)) +
   geom_point() +
-  stat_smooth(method = "lm") +
+  geom_abline(intercept = 0, slope = 1) +
   labs(title = "Observed vs. Predicted Values: Cross Validation", 
                                     x = "Observed Mortality Rate",
                                     y = "Predicted Mortality Rate")
 
 ```
-Here, I've used half the data to fit the model generated above, and cross validated it with the second half of the data set. Based on the plot of observed mortality rate vs. predicted mortality rate for the second half of the data, we can see that the model does a mediocre job of predicting the mortality rate based on these three pollutants. If predicted equalled observed data exactly, we would see no standard error (meaning all variation was explained by the model) as well as data points perfectly fitting a line of slope one. Here, this is not the case.
+Here, I've used half the data to fit the model generated above, and cross validated it with the second half of the data set. Based on the plot of observed mortality rate vs. predicted mortality rate for the second half of the data, we can see that the model does a mediocre job of predicting the mortality rate based on these three pollutants. If predicted equalled observed data exactly, we would see little to no variability around the line y = x. Here, this is not the case.
 
 
 ### f) What do you think are the reasons for using cross-validation?
@@ -345,7 +340,7 @@ drinks <- drinks %>% mutate(prop =
                           ifelse(sex == "f", n/f_tot, 
                                  ifelse(sex == "m", n/m_tot, NA)))
 
-drinks$drinks <- suppressWarnings(factor(drinks$drinks , levels = drinks$drinks [order(-drinks$prop)]))
+drinks$drinks <- factor(drinks$drinks, levels = c("not at all", "rarely", "socially", "often", "very often", "desperately"))
 
 
 ggplot(drinks, aes(x = drinks, y = prop, fill = sex)) +
@@ -369,8 +364,7 @@ drugs <- drugs %>% mutate(prop =
                                  ifelse(sex == "m", n/m_tot, NA)))
 
 
-drugs$drugs <- suppressWarnings(factor(drugs$drugs , 
-                                       levels = drugs$drugs [order(-drugs$prop)]))
+drugs$drugs <- factor(drugs$drugs, levels = c("never", "sometimes", "often"))
 
 ggplot(drugs, aes(x = drugs, y = prop, fill = sex)) +
   geom_bar(stat = "identity", position = "dodge") +
@@ -427,7 +421,7 @@ ggplot(data = profiles, aes(x = sex, y = income_num)) +
 kable(profiles %>% group_by(sex) %>% summarise(mean(income_num)), digits = 3)
 ```
   
-  A histogram of log-transformed incomes shows a roughly equal distribution of income. However, a higher proportion of women skew toward the low income side of the scale. The boxplot of income reflects this finding, showing that on average, men make $14,81067 more than women. However, I don't think income is a good predictor of gender because there are too many confounding factors. Many users failed to report income levels, could be falsely inflating income, and many incomes populated as $-1.
+  A histogram of log-transformed incomes shows a roughly equal distribution of income. However, a higher proportion of women skew toward the low income side of the scale. The boxplot of income reflects this finding, showing that on average, men make $14,81067 more than women. However, I don't think income is a good predictor of gender because there are too many confounding factors. The majority of users either didn't include income or reported it as $-1, both of which were excluded in the analysis. 
 
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
@@ -451,41 +445,31 @@ profile.has.query <- function(data.frame, query){
 
 #makeup
 profiles$has_makeup <- profile.has.query(data.frame = essays, query = "makeup")
-group_by(profiles, has_makeup) %>% 
-  summarise(prop_female=mean(is_female)) %>% kable(., digits = 3)
-
-ggplot(data=profiles, aes(x=has_makeup, y=is_female)) + 
-  xlab("has makeup") + ylab("is female?") +
-  geom_jitter()
+makeup_table <- group_by(profiles, has_makeup) %>% 
+  summarise(prop_female=mean(is_female)) %>% spread(has_makeup, prop_female) 
 
 #bakes
 profiles$has_baking <- profile.has.query(data.frame = essays, query = "baking")
-group_by(profiles, has_baking) %>% 
-  summarise(prop_female=mean(is_female)) %>% kable(., digits = 3)
-
-ggplot(data=profiles, aes(x=has_baking, y=is_female)) + 
-  xlab("has baking") + ylab("is female?") +
-  geom_jitter()
+bakes_table <- group_by(profiles, has_baking) %>% 
+  summarise(prop_female=mean(is_female)) %>% spread(has_baking, prop_female)
 
 #heels
 profiles$has_heels <- profile.has.query(data.frame = essays, query = "heels")
-group_by(profiles, has_heels) %>% 
-  summarise(prop_female=mean(is_female)) %>% kable(., digits = 3)
-
-ggplot(data=profiles, aes(x=has_heels, y=is_female)) + 
-  xlab("has heels") + ylab("is female?") +
-  geom_jitter()
+heels_table <- group_by(profiles, has_heels) %>% 
+  summarise(prop_female=mean(is_female)) %>% spread(has_heels, prop_female)
 
 #brunch
 profiles$has_brunch <- profile.has.query(data.frame = essays, query = "brunch")
-group_by(profiles, has_brunch) %>% 
-  summarise(prop_female=mean(is_female)) %>% kable(., digits = 3)
+brunch_table <- group_by(profiles, has_brunch) %>% 
+  summarise(prop_female=mean(is_female)) %>% spread(has_brunch, prop_female)
 
-ggplot(data=profiles, aes(x=has_brunch, y=is_female)) + 
-  xlab("has heels") + ylab("is female?") +
-  geom_jitter()
+female_predict <- bind_rows(makeup_table, bakes_table, heels_table, brunch_table)
+female_predict <- as.data.frame(female_predict)
+row.names(female_predict) <- c("makeup", "baking", "heels", "brunch")
+kable(female_predict)
 
 ```
+
 An analysis of frequently used words in user essays shows that women are likely to include "makeup", "baking", "heels", and "brunch" in their profiles. I will say that this portion of the homework was incredibly frustrating and I felt that randomly fishing for "female" words seemed a bit reductive. 
 
 
